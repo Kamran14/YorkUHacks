@@ -1,66 +1,61 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System.Collections;
+using System.Collections.Generic;
+using System;
+using System.Reflection;
+using UnityEngine;
+using UnityEngine.UI;
 
-public class Main : MonoBehaviour
-{
+public class Main : MonoBehaviour {
 
-	string qrString = "";
-	bool background = true;
+    public string tagID;
+    public Text tag_output_text;
+    public bool tagFound = false;
 
-	void Start(){
-		AndroidNFCReader.enableBackgroundScan ();
-		AndroidNFCReader.ScanNFC (gameObject.name, "OnFinishScan");
-	}
-
-	void OnGUI ()
-	{
-		if (!background) {
-			// Scan NFC button
-			if (GUI.Button (new Rect (0, Screen.height - 50, Screen.width, 50), "Scan NFC")) {
-				AndroidNFCReader.ScanNFC (gameObject.name, "OnFinishScan");
-			}
-			if (GUI.Button (new Rect (0, Screen.height - 100, Screen.width, 50), "Enable Backgraound Mode")) {
-				AndroidNFCReader.enableBackgroundScan ();
-				background = true;
-			}
-		}else{
-			if (GUI.Button (new Rect (0, Screen.height - 50, Screen.width, 50), "Disable Backgraound Mode")) {
-				AndroidNFCReader.disableBackgroundScan ();
-				background = false;
-			}
-		}
-		GUI.Label (new Rect (0, 0, Screen.width, 50), "Result: " + qrString);
-	}
-
-	// NFC callback
-	void OnFinishScan (string result)
-	{
-
-		// Cancelled
-		if (result == AndroidNFCReader.CANCELLED) {
-		
-			// Error
-		} else if (result == AndroidNFCReader.ERROR) {
-		
-
-			// No hardware
-		} else if (result == AndroidNFCReader.NO_HARDWARE) {
-		}
+    private AndroidJavaObject mActivity;
+    private AndroidJavaObject mIntent;
+    private string sAction;
 
 
-		qrString = getToyxFromUrl (result);
-	}
+    void Start() {
+        tag_output_text.text = "No tag...";
+        
+    }
 
-	// Extract toyxId from url
-	string getToyxFromUrl (string url)
-	{		
-		int index = url.LastIndexOf ('/') + 1;
-		
-		if (url.Length > index) {
-			return url.Substring (index);		
-		} 
-		
-		return url;
-	}
-
+    void Update() {
+        if (Application.platform == RuntimePlatform.Android) {
+            if (!tagFound) {
+                try {
+                    // Create new NFC Android object
+                    mActivity = new AndroidJavaClass("com.unity3d.player.UnityPlayer").GetStatic<AndroidJavaObject>("currentActivity");
+                    mIntent = mActivity.Call<AndroidJavaObject>("getIntent");
+                    sAction = mIntent.Call<String>("getAction");
+                    if (sAction == "android.nfc.action.NDEF_DISCOVERED") {
+                        Debug.Log("Tag of type NDEF");
+                    } else if (sAction == "android.nfc.action.TECH_DISCOVERED") {
+                        Debug.Log("TAG DISCOVERED");
+                        // Get ID of tag
+                        AndroidJavaObject mNdefMessage = mIntent.Call<AndroidJavaObject>("getParcelableExtra", "android.nfc.extra.TAG");
+                        if (mNdefMessage != null) {
+                            byte[] payLoad = mNdefMessage.Call<byte[]>("getId");
+                            string text = System.Convert.ToBase64String(payLoad);
+                            tag_output_text.text = text;
+                            tagID = text;
+                        } else {
+                            tag_output_text.text = "No ID found !";
+                        }
+                        tagFound = true;
+                        return;
+                    } else if (sAction == "android.nfc.action.TAG_DISCOVERED") {
+                        Debug.Log("This type of tag is not supported !");
+                    } else {
+                        tag_output_text.text = "No tag...";
+                        return;
+                    }
+                } catch (Exception ex) {
+                    string text = ex.Message;
+                    tag_output_text.text = text;
+                }
+            }
+        }
+    }
 }
