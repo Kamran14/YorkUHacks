@@ -10,9 +10,11 @@ public class Main : MonoBehaviour {
     public string tagID;
     public Text tag_output_text;
     public bool tagFound = false;
+    public Text tagStatus;
 
     private AndroidJavaObject mActivity;
     private AndroidJavaObject mIntent;
+    private AndroidJavaObject mToast;
     private string sAction;
 
 
@@ -32,7 +34,9 @@ public class Main : MonoBehaviour {
                     if (sAction == "android.nfc.action.NDEF_DISCOVERED") {
                         Debug.Log("Tag of type NDEF");
                     } else if (sAction == "android.nfc.action.TECH_DISCOVERED") {
+
                         Debug.Log("TAG DISCOVERED");
+                        tagStatus.text = "TAG_DISCOVERED";
                         // Get ID of tag
                         AndroidJavaObject mNdefMessage = mIntent.Call<AndroidJavaObject>("getParcelableExtra", "android.nfc.extra.TAG");
                         if (mNdefMessage != null) {
