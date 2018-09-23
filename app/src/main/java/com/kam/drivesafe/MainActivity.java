@@ -10,38 +10,19 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.nfc.NdefMessage;
-import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
-import android.nfc.NfcEvent;
 import android.nfc.NfcManager;
-import android.nfc.Tag;
-import android.nfc.TagLostException;
-import android.nfc.tech.Ndef;
-import android.os.AsyncTask;
-import android.os.Debug;
-import android.os.Handler;
-import android.os.Parcelable;
+import android.os.VibrationEffect;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatViewInflater;
 import android.util.Log;
-import android.view.View;
-import android.view.Window;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import org.w3c.dom.Text;
-
-import java.io.Console;
-import java.io.UnsupportedEncodingException;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Arrays;
 import java.util.Locale;
-import java.util.Timer;
-import java.util.TimerTask;
+import android.os.Vibrator;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private static final String TAG = "NFC";
@@ -51,39 +32,39 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private TextView myText;
     private TextView value;
     private SensorManager sensorManager;
+    private Vibrator mVibrator;
+    private Double oldVal;
+    private Double currVal;
     public static DecimalFormat DECIMAL_FORMATTER;
 
 
-        @Override
-        public void onCreate(Bundle savedInstance){
-            super.onCreate(savedInstance);
-            setContentView(R.layout.activity_main);
-            myText = (TextView) findViewById(R.id.textView3);
-            nfcAdapter = NfcAdapter.getDefaultAdapter(this);
-            nfcPendingIntent = PendingIntent.getActivity(this, 0, new Intent(this, this.getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
-            value = (TextView) findViewById(R.id.value);
-            // define decimal formatter
-            DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
-            symbols.setDecimalSeparator('.');
-            DECIMAL_FORMATTER = new DecimalFormat("#.000", symbols);
-            sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+    @Override
+    public void onCreate(Bundle savedInstance){
+        super.onCreate(savedInstance);
+        setContentView(R.layout.activity_main);
+        myText = (TextView) findViewById(R.id.textView3);
+        nfcAdapter = NfcAdapter.getDefaultAdapter(this);
+        nfcPendingIntent = PendingIntent.getActivity(this, 0, new Intent(this, this.getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
+        value = (TextView) findViewById(R.id.value);
+        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
+        symbols.setDecimalSeparator('.');
+        DECIMAL_FORMATTER = new DecimalFormat("#.000", symbols);
+        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        oldVal = null;
+        currVal = null;
 
-        }
+    }
 
-        @Override
-        protected void onResume(){
-                super.onResume();
-
-                Log.d(TAG, "enableForegroundMode");
-
-
-                // foreground mode gives the current active application priority for reading scanned tags
-
-                IntentFilter tagDetected = new IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED); // filter for tags
-                IntentFilter[] writeTagFilters = new IntentFilter[]{tagDetected};
-                nfcAdapter.enableForegroundDispatch(this, nfcPendingIntent, writeTagFilters, null);
-            sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD),SensorManager.SENSOR_DELAY_NORMAL);
-        }
+    @Override
+    protected void onResume(){
+        super.onResume();
+        Log.d(TAG, "enableForegroundMode");
+        IntentFilter tagDetected = new IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED); // filter for tags
+        IntentFilter[] writeTagFilters = new IntentFilter[]{tagDetected};
+        nfcAdapter.enableForegroundDispatch(this, nfcPendingIntent, writeTagFilters, null);
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD),SensorManager.SENSOR_DELAY_NORMAL);
+    }
 
     @Override
     protected void onPause() {
@@ -99,10 +80,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             float magY = event.values[1];
             float magZ = event.values[2];
             double magnitude = Math.sqrt((magX * magX) + (magY * magY) + (magZ * magZ));
-            // set value on the screen
-            value.setTextColor(Color.BLACK\);
+
+            value.setTextColor(Color.BLACK);
             value.setText(DECIMAL_FORMATTER.format(magnitude) + " \u00B5Tesla");
+
+            if(oldVal == null)
+                oldVal = magnitude;
+            if((oldVal + 50) <= Double.parseDouble(DECIMAL_FORMATTER.format(magnitude)) || (oldVal - 50) <= Double.parseDouble(DECIMAL_FORMATTER.format(magnitude))){
+                oldVal = magnitude;
+                mVibrator.vibrate(2000);
+            }
+
         }
+
     }
 
     @Override
