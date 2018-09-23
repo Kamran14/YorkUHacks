@@ -13,9 +13,12 @@ import android.hardware.SensorManager;
 import android.nfc.NfcAdapter;
 import android.nfc.NfcManager;
 import android.os.VibrationEffect;
+import android.support.design.internal.BottomNavigationMenu;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.text.DecimalFormat;
@@ -23,6 +26,9 @@ import java.text.DecimalFormatSymbols;
 import java.util.Arrays;
 import java.util.Locale;
 import android.os.Vibrator;
+
+import com.aurelhubert.ahbottomnavigation.AHBottomNavigation;
+import com.aurelhubert.ahbottomnavigation.AHBottomNavigationItem;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private static final String TAG = "NFC";
@@ -36,6 +42,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Double oldVal;
     private Double currVal;
     public static DecimalFormat DECIMAL_FORMATTER;
+    private AHBottomNavigation mBottomNav;
+
+
 
 
     @Override
@@ -51,10 +60,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         DECIMAL_FORMATTER = new DecimalFormat("#.000", symbols);
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        mBottomNav = (AHBottomNavigation)  findViewById(R.id.bottom_navigation);
+        mBottomNav.setForegroundGravity(Gravity.BOTTOM);
         oldVal = null;
         currVal = null;
-
+        mBottomNav.addItem(new AHBottomNavigationItem("Home", R.drawable.home));
+        mBottomNav.addItem(new AHBottomNavigationItem("Trip", R.drawable.item_background));
+        mBottomNav.addItem(new AHBottomNavigationItem("My Stats", R.drawable.item_background));
+        mBottomNav.addItem(new AHBottomNavigationItem("Profile", R.drawable.profile));
+        mBottomNav.setAccentColor(ContextCompat.getColor(this,  R.color.colorAccent));
+        mBottomNav.setTitleState(AHBottomNavigation.TitleState.ALWAYS_SHOW);
     }
+
+
 
     @Override
     protected void onResume(){
@@ -69,7 +87,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     protected void onPause() {
         super.onPause();
-        sensorManager.unregisterListener(this);
+
     }
 
     @Override
@@ -86,13 +104,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             if(oldVal == null)
                 oldVal = magnitude;
-            if((oldVal + 50) <= Double.parseDouble(DECIMAL_FORMATTER.format(magnitude)) || (oldVal - 50) <= Double.parseDouble(DECIMAL_FORMATTER.format(magnitude))){
+            if((oldVal + 100) <= magnitude || (oldVal - 100) >= magnitude){
                 oldVal = magnitude;
                 mVibrator.vibrate(2000);
+                myText.setTextColor(Color.RED);
+                myText.setText("PLEASE PUT PHONE AWAY");
             }
-
         }
-
     }
 
     @Override
